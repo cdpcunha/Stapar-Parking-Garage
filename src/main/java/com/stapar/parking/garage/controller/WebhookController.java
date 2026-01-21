@@ -2,9 +2,7 @@ package com.stapar.parking.garage.controller;
 
 import com.stapar.parking.garage.repository.SessionRepository;
 import com.stapar.parking.garage.service.ParkingService;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
