@@ -21,22 +21,21 @@ repositories {
 dependencies {
 	//Dependências Fonte
 	implementation 'org.springframework.boot:spring-boot-starter'
-	testImplementation 'org.springframework.boot:spring-boot-starter-test'
-	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
 	implementation 'org.springframework.boot:spring-boot-starter-web'
 	implementation 'org.springframework.boot:spring-boot-starter-validation'
+	implementation 'com.fasterxml.jackson.core:jackson-core'
+
 	runtimeOnly 'com.mysql:mysql-connector-j'
 	compileOnly 'org.projectlombok:lombok'
 	annotationProcessor 'org.projectlombok:lombok'
 
 	//Dependências de Teste
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
-	testImplementation 'org.junit.jupiter:junit-jupiter-api:5.10.0'
-	testImplementation 'org.junit.jupiter:junit-jupiter-engine:5.10.0'
-	testImplementation 'org.mockito:mockito-core:5.7.0'
-	testImplementation 'org.mockito:mockito-junit-jupiter:5.7.0'
-	testImplementation 'org.assertj:assertj-core:3.24.2' // Para asserções fluentes e legíveis
+	testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
+	testImplementation 'org.assertj:assertj-core:3.24.2'
+
+	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
 tasks.named('test') {

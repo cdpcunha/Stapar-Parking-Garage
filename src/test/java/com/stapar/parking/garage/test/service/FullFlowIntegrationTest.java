@@ -14,7 +14,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
-@ActiveProfiles("test") // Usa o application-test.properties (H2)
+@ActiveProfiles("test")
 public class FullFlowIntegrationTest {
 
     private MockMvc mockMvc;
