@@ -14,7 +14,7 @@ public class Sector {
     private Long id;
 
     @Column(unique = true)
-    private String code; // Ex: "A"
+    private String code;
 
     private BigDecimal basePrice;
     private Integer maxCapacity;

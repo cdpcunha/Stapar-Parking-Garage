@@ -1,12 +1,21 @@
 package com.stapar.parking.garage.test.service;
 
+import com.stapar.parking.garage.domain.Sector;
+import com.stapar.parking.garage.domain.Spot;
+import com.stapar.parking.garage.repository.SectorRepository;
+import com.stapar.parking.garage.repository.SessionRepository;
+import com.stapar.parking.garage.repository.SpotRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
-import tools.jackson.databind.ObjectMapper;
+
+import java.math.BigDecimal;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -14,11 +23,30 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
+@AutoConfigureMockMvc
 @ActiveProfiles("test")
 public class FullFlowIntegrationTest {
 
+    @Autowired
     private MockMvc mockMvc;
-    private ObjectMapper objectMapper;
+
+    @Autowired
+    private SectorRepository sectorRepo;
+
+    @Autowired
+    private SpotRepository spotRepo;
+
+    @Autowired
+    private SessionRepository sessionRepo;
+
+    @BeforeEach
+    void setup() {
+        sessionRepo.deleteAll();
+        spotRepo.deleteAll();
+        sectorRepo.deleteAll();
+        sectorRepo.save(new Sector(null, "A", new BigDecimal("9.00"), 100));
+        spotRepo.save(new Spot(1L, "A", -23.561684, -46.655981));
+    }
 
     @Test
     @DisplayName("Deve executar o ciclo de vida completo de um veículo e calcular receita")
@@ -74,7 +102,7 @@ public class FullFlowIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(revenueRequest))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.amount").value(27.00))
+                .andExpect(jsonPath("$.amount").value(24.30))
                 .andExpect(jsonPath("$.currency").value("BRL"));
     }
 }

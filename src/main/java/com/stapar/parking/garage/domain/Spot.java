@@ -14,4 +14,5 @@ public class Spot {
     private String sectorCode;
     private Double lat;
     private Double lng;
+
 }

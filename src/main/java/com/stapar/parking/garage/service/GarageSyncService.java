@@ -9,7 +9,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestClient;
 
 @Service
@@ -25,11 +24,10 @@ public class GarageSyncService {
                              RestClient.Builder builder) {
         this.sectorRepo = sectorRepo;
         this.spotRepo = spotRepo;
-        this.restClient = builder.baseUrl("http://localhost:8080").build();
+        this.restClient = builder.baseUrl("http://localhost:3000").build();
     }
 
     @EventListener(ApplicationReadyEvent.class)
-    @Transactional
     public void syncOnStartup() {
         try {
             GarageResponse response = restClient.get()

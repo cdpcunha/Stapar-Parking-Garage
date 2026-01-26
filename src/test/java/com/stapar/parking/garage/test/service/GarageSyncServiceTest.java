@@ -1,98 +1,102 @@
 package com.stapar.parking.garage.test.service;
 
+import com.stapar.parking.garage.domain.Sector;
+import com.stapar.parking.garage.domain.Spot;
 import com.stapar.parking.garage.repository.SectorRepository;
 import com.stapar.parking.garage.repository.SpotRepository;
+import com.stapar.parking.garage.response.records.GarageConfigDTO;
+import com.stapar.parking.garage.response.records.GarageResponse;
+import com.stapar.parking.garage.response.records.SpotConfigDTO;
 import com.stapar.parking.garage.service.GarageSyncService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.mockito.InjectMocks;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
-
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.http.MediaType;
-import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.web.client.MockRestServiceServer;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.web.client.RestClient;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
-import static org.springframework.test.web.client.response.MockRestResponseCreators.withServerError;
-import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
+import java.math.BigDecimal;
+import java.util.List;
 
-@SpringBootTest
-@ActiveProfiles("test")
+import static org.mockito.Mockito.*;
+
+@ExtendWith(MockitoExtension.class)
 class GarageSyncServiceTest {
 
-    @InjectMocks
-    private GarageSyncService garageSyncService;
+    @Mock
+    private SectorRepository sectorRepo;
 
-    @Mock private SectorRepository sectorRepo;
-    @Mock private SpotRepository spotRepo;
+    @Mock
+    private SpotRepository spotRepo;
 
+    @Mock
     private RestClient.Builder restClientBuilder;
-    private MockRestServiceServer mockServer;
+
+    @Mock
+    private RestClient restClient;
+
+    @Mock
+    private RestClient.RequestHeadersUriSpec requestHeadersUriSpec;
+
+    @Mock
+    private RestClient.RequestHeadersSpec requestHeadersSpec;
+
+    @Mock
+    private RestClient.ResponseSpec responseSpec;
+
+    private GarageSyncService garageSyncService;
 
     @BeforeEach
     void setUp() {
-        mockServer = MockRestServiceServer.bindTo(restClientBuilder).build();
-        spotRepo.deleteAll();
-        sectorRepo.deleteAll();
+        when(restClientBuilder.baseUrl(anyString())).thenReturn(restClientBuilder);
+        when(restClientBuilder.build()).thenReturn(restClient);
+
+        garageSyncService = new GarageSyncService(sectorRepo, spotRepo, restClientBuilder);
     }
 
     @Test
-    @DisplayName("Deve sincronizar setores e vagas com sucesso ao receber JSON do simulador")
-    void shouldSyncSuccess() {
-        String jsonResponse = """
-            {
-              "garage": [
-                { "sector": "A", "basePrice": 10.0, "max_capacity": 100 }
-              ],
-              "spots": [
-                { "id": 1, "sector": "A", "lat": -23.561684, "lng": -46.655981 }
-              ]
-            }
-            """;
+    @DisplayName("Deve sincronizar com sucesso quando o simulador retorna dados válidos")
+    void shouldSyncSuccessfully() {
+        var garageData = List.of(new GarageConfigDTO("A", new BigDecimal("10.0"), 100));
+        var spotsData = List.of(new SpotConfigDTO(1L, "A", -23.56, -46.65));
+        var response = new GarageResponse(garageData, spotsData);
 
-        mockServer.expect(requestTo("http://localhost:8080/garage"))
-                .andRespond(withSuccess(jsonResponse, MediaType.APPLICATION_JSON));
+        when(restClient.get()).thenReturn(requestHeadersUriSpec);
+        when(requestHeadersUriSpec.uri(anyString())).thenReturn(requestHeadersSpec);
+        when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
+        when(responseSpec.body(GarageResponse.class)).thenReturn(response);
 
         garageSyncService.syncOnStartup();
 
-        assertThat(sectorRepo.count()).isEqualTo(1);
-        assertThat(sectorRepo.findByCode("A")).isPresent();
-        assertThat(sectorRepo.findByCode("A").get().getMaxCapacity()).isEqualTo(100);
+        verify(spotRepo, times(1)).deleteAll();
+        verify(sectorRepo, times(1)).deleteAll();
 
-        assertThat(spotRepo.count()).isEqualTo(1);
-        assertThat(spotRepo.findByLatAndLng(-23.561684, -46.655981)).isPresent();
-
-        mockServer.verify();
+        verify(sectorRepo, times(1)).save(any(Sector.class));
+        verify(spotRepo, times(1)).save(any(Spot.class));
     }
 
     @Test
-    @DisplayName("Deve tratar erro silenciosamente e logar quando o simulador falhar")
-    void shouldHandleErrorWhenSimulatorIsDown() {
-        // Configura o mock para retornar um erro 500
-        mockServer.expect(requestTo("http://localhost:8080/garage"))
-                .andRespond(withServerError());
+    @DisplayName("Deve capturar exceção e não interromper o startup se o simulador falhar")
+    void shouldHandleSimulatorErrorSilently() {
+        when(restClient.get()).thenThrow(new RuntimeException("Connection Refused"));
 
         garageSyncService.syncOnStartup();
 
-        assertThat(sectorRepo.count()).isZero();
-        assertThat(spotRepo.count()).isZero();
-
-        mockServer.verify();
+        verify(sectorRepo, never()).deleteAll();
+        verify(sectorRepo, never()).save(any());
     }
 
     @Test
-    @DisplayName("Deve lidar com resposta vazia (null body) do simulador")
-    void shouldHandleEmptyBody() {
-        mockServer.expect(requestTo("http://localhost:8080/garage"))
-                .andRespond(withSuccess("", MediaType.APPLICATION_JSON));
+    @DisplayName("Não deve processar nada se o corpo da resposta for nulo")
+    void shouldDoNothingIfResponseBodyIsNull() {
+        when(restClient.get()).thenReturn(requestHeadersUriSpec);
+        when(requestHeadersUriSpec.uri(anyString())).thenReturn(requestHeadersSpec);
+        when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
+        when(responseSpec.body(GarageResponse.class)).thenReturn(null);
 
         garageSyncService.syncOnStartup();
 
-        assertThat(sectorRepo.count()).isZero();
-        mockServer.verify();
+        verify(sectorRepo, never()).deleteAll();
     }
 }

@@ -37,7 +37,7 @@ public class ParkingService {
 
         // Se cheio, lança exceção
         if (occupied >= totalCapacity) {
-            throw new RuntimeException("Garagem Lotada");
+            throw new BusinessException("Garagem Lotada");
         }
 
         // 3. Calcula Preço Dinâmico
@@ -66,10 +66,10 @@ public class ParkingService {
     @Transactional
     public void processParked(String plate, Double lat, Double lng) {
         var session = sessionRepo.findActiveByPlate(plate)
-                .orElseThrow(() -> new RuntimeException("Veículo não deu entrada: " + plate));
+                .orElseThrow(() -> new BusinessException("Veículo não deu entrada: " + plate));
 
         var spot = spotRepo.findByLatAndLng(lat, lng)
-                .orElseThrow(() -> new RuntimeException("Vaga não encontrada nas coordenadas"));
+                .orElseThrow(() -> new BusinessException("Vaga não encontrada nas coordenadas"));
 
         session.setAssignedSector(spot.getSectorCode());
         session.setStatus(SessionStatus.PARKED);
@@ -79,10 +79,10 @@ public class ParkingService {
     @Transactional
     public void processExit(String plate, LocalDateTime exitTime) {
         var session = sessionRepo.findActiveByPlate(plate)
-                .orElseThrow(() -> new RuntimeException("Sessão não encontrada para: " + plate));
+                .orElseThrow(() -> new BusinessException("Sessão não encontrada para: " + plate));
 
         var sector = sectorRepo.findByCode(session.getAssignedSector())
-                .orElseThrow(() -> new RuntimeException("Setor inválido"));
+                .orElseThrow(() -> new BusinessException("Setor inválido"));
 
         BigDecimal finalPrice = calculatePrice(
                 session.getEntryTime(),
